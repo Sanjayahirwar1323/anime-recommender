@@ -16,7 +16,10 @@ spec:
       - name: ml-app-container
         image: gcr.io/anime-recommender-456309/ml-animerecommender:latest
         ports:
-        - containerPort: 5000  # Replace with the port your app listens on
+        - containerPort: 5000
+      # If needed, uncomment for private registry access
+      # imagePullSecrets:
+      # - name: gcr-secret
 ---
 apiVersion: v1
 kind: Service

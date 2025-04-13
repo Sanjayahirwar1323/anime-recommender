@@ -9,7 +9,6 @@ pipeline {
     }
 
     stages{
-
         stage("Cloning from Github...."){
             steps{
                 script{
@@ -18,15 +17,6 @@ pipeline {
                 }
             }
         }
-    
-//         stage("Making a virtual environment...."){
-//             steps{
-//                 script{
-//                     echo 'Cloning from Github...'
-//                     checkout scmGit(branches: [[name: '*/main']], extensions: [], userRemoteConfigs: [[credentialsId: 'github-token', url: 'https://github.com/Sanjayahirwar1323/anime-recommender.git']])
-//                 }
-//             }
-//         }
 
         stage("Making a virtual environment...."){
             steps{
@@ -43,14 +33,11 @@ pipeline {
             }
         }
     
-
-
-
         stage('DVC Pull'){
             steps{
                 withCredentials([file(credentialsId:'gcp-key' , variable: 'GOOGLE_APPLICATION_CREDENTIALS' )]){
                     script{
-                        echo 'DVC Pul....'
+                        echo 'DVC Pull....'
                         sh '''
                         . ${VENV_DIR}/bin/activate
                         dvc pull
@@ -60,9 +47,6 @@ pipeline {
             }
         }
     
-
-
-
         stage('Building and Pushing Docker Image to GCR') {
             steps {
                 withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
@@ -74,24 +58,14 @@ pipeline {
                         gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
                         gcloud config set project ${GCP_PROJECT}
                         
-                        # Option 1: Use Google Cloud Build (recommended for M1 Macs)
-                        gcloud builds submit --tag gcr.io/${GCP_PROJECT}/ml-animerecommender:v1 .
-                        
-                        # Option 2: If you prefer local Docker build (keep as fallback)
-                        # Uncomment these lines if you want to use local Docker instead of Cloud Build
-                        # gcloud auth configure-docker --quiet
-                        # docker build --platform linux/amd64 -t gcr.io/${GCP_PROJECT}/ml-animerecommender:v1 .
-                        # docker push gcr.io/${GCP_PROJECT}/ml-animerecommender:v1
+                        # Build and push both with v1 and latest tags
+                        gcloud builds submit --tag gcr.io/${GCP_PROJECT}/ml-animerecommender:v1 --tag gcr.io/${GCP_PROJECT}/ml-animerecommender:latest .
                         '''
                     }
                 }
             }
         }
         
-    
-
-
-
         stage('Deploying to Kubernetes'){
             steps{
                 withCredentials([file(credentialsId:'gcp-key' , variable: 'GOOGLE_APPLICATION_CREDENTIALS' )]){
