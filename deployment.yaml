@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
       - name: ml-app-container
-        image: gcr.io/mlops-new-447207/ml-project:latest
+        image: gcr.io/anime-recommender-456309/ml-animerecommender:latest
         ports:
         - containerPort: 5000  # Replace with the port your app listens on
 ---

@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         VENV_DIR = 'venv'
-    //     GCP_PROJECT = 'mlops-new-447207'
-    //     GCLOUD_PATH = "/var/jenkins_home/google-cloud-sdk/bin"
-    //     KUBECTL_AUTH_PLUGIN = "/usr/lib/google-cloud-sdk/bin"
+        GCP_PROJECT = 'anime-recommender-456309'
+        GCLOUD_PATH = "/var/jenkins_home/google-cloud-sdk/bin"
+        KUBECTL_AUTH_PLUGIN = "/usr/lib/google-cloud-sdk/bin"
     }
 
     stages{
@@ -59,44 +59,54 @@ pipeline {
                 }
             }
         }
+    
+
+
+
+        stage('Building and Pushing Docker Image to GCR') {
+            steps {
+                withCredentials([file(credentialsId: 'gcp-key', variable: 'GOOGLE_APPLICATION_CREDENTIALS')]) {
+                    script {
+                        echo 'Building and Pushing Docker Image to GCR using Cloud Build.............'
+                        sh '''
+                        # Configure gcloud
+                        export PATH=$PATH:${GCLOUD_PATH}:${DOCKER_PATH}
+                        gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+                        gcloud config set project ${GCP_PROJECT}
+                        
+                        # Option 1: Use Google Cloud Build (recommended for M1 Macs)
+                        gcloud builds submit --tag gcr.io/${GCP_PROJECT}/ml-animerecommender:v1 .
+                        
+                        # Option 2: If you prefer local Docker build (keep as fallback)
+                        # Uncomment these lines if you want to use local Docker instead of Cloud Build
+                        # gcloud auth configure-docker --quiet
+                        # docker build --platform linux/amd64 -t gcr.io/${GCP_PROJECT}/ml-animerecommender:v1 .
+                        # docker push gcr.io/${GCP_PROJECT}/ml-animerecommender:v1
+                        '''
+                    }
+                }
+            }
+        }
+        
+    
+
+
+
+        stage('Deploying to Kubernetes'){
+            steps{
+                withCredentials([file(credentialsId:'gcp-key' , variable: 'GOOGLE_APPLICATION_CREDENTIALS' )]){
+                    script{
+                        echo 'Deploying to Kubernetes'
+                        sh '''
+                        export PATH=$PATH:${GCLOUD_PATH}:${KUBECTL_AUTH_PLUGIN}
+                        gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
+                        gcloud config set project ${GCP_PROJECT}
+                        gcloud container clusters get-credentials ml-app-cluster --region us-central1
+                        kubectl apply -f deployment.yaml
+                        '''
+                    }
+                }
+            }
+        }
     }
 }
-
-
-//         stage('Build and Push Image to GCR'){
-//             steps{
-//                 withCredentials([file(credentialsId:'gcp-key' , variable: 'GOOGLE_APPLICATION_CREDENTIALS' )]){
-//                     script{
-//                         echo 'Build and Push Image to GCR'
-//                         sh '''
-//                         export PATH=$PATH:${GCLOUD_PATH}
-//                         gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-//                         gcloud config set project ${GCP_PROJECT}
-//                         gcloud auth configure-docker --quiet
-//                         docker build -t gcr.io/${GCP_PROJECT}/ml-project:latest .
-//                         docker push gcr.io/${GCP_PROJECT}/ml-project:latest
-//                         '''
-//                     }
-//                 }
-//             }
-//         }
-
-
-//         stage('Deploying to Kubernetes'){
-//             steps{
-//                 withCredentials([file(credentialsId:'gcp-key' , variable: 'GOOGLE_APPLICATION_CREDENTIALS' )]){
-//                     script{
-//                         echo 'Deploying to Kubernetes'
-//                         sh '''
-//                         export PATH=$PATH:${GCLOUD_PATH}:${KUBECTL_AUTH_PLUGIN}
-//                         gcloud auth activate-service-account --key-file=${GOOGLE_APPLICATION_CREDENTIALS}
-//                         gcloud config set project ${GCP_PROJECT}
-//                         gcloud container clusters get-credentials ml-app-cluster --region us-central1
-//                         kubectl apply -f deployment.yaml
-//                         '''
-//                     }
-//                 }
-//             }
-//         }
-//     }
-// }
